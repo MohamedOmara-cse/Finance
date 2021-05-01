@@ -1,0 +1,112 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+    <head>
+        <title>hello</title>
+    </head>
+    <body>
+{{ n }}
+    </body>
+</html>
+return apology("invalid symbol", 400)
+
+        return
+        symbol=request.form.get("symbol")
+        num_shares = request.form.get("shares")
+        if not symbol :
+
+             return apology("Missing Symbol",code=400)
+        elif not num_shares:
+             return apology("Missind Shares",code=400)
+        else:
+
+
+
+            num_shares=int(num_shares)
+            look=lookup(symbol)
+            price=float(look["price"])
+
+            rows=db.excute("SELECT cash FROM users WHERE id=?",session["user_id"])
+            full_price =price*num_shares
+            cash=rows[0]["cash"]
+            #If the user don't have enough money, apologize
+            if cash < full_price:
+
+                return apology("You don't have enough money to pay", 403)
+
+         # If the user can afford the purchase, proceed
+            else:
+                buying=db.excute ("INSERT INTO history (id,symbol,price,shares,operation)VALUES(?,?,?,?,?)",session["user_id"],symbol,price,num_shares,"Buying")
+                cost=cash-full_price
+                db.execute("UPDATE users SET cash =? WHERE id = ?",cost,session['user_id'])
+                redirect ("/register")
+                
+                
+                ################################################################
+                
+                
+    if request.method=="POST":
+
+
+
+#getting the username from users Table DB
+        user_shares = db.execute("SELECT shares FROM portfolio WHERE username = :username and symbol = :symbol",
+                        username=db.execute("SELECT username FROM users WHERE id = :uid", uid=int(session['user_id']))[0]["username"], symbol=str(request.form.get("symbol")))[0]["shares"]
+
+#recieve data from sell.html page throw request
+        symbol=str(request.form.get("symbol"))
+        shares=int(request.form.get("shares"))
+
+
+
+#getting number of shares that is in portfolio DB
+        user_shares = db.execute("SELECT shares FROM portfolio WHERE username = :username and symbol = :symbol",
+                        username=db.execute("SELECT username FROM users WHERE id = :uid", uid=int(session['user_id']))[0]["username"], symbol=str(request.form.get("symbol")))
+
+        # If the symbol searched or number of shares is invalid, return apology
+        if not request.form.get("symbol") or lookup(symbol) == None:
+            return apology("you must provide a stock", 400)
+        elif not  shares or  shares < 1 or shares > int(user_shares):
+            return apology("share number is invalid", 400)
+
+        else:
+
+            #request the name ,price and symbol using API_KEY
+            look=lookup(request.form.get("symbol"))
+            full_price = look["price"] * int((shares)[0]["shares"])
+
+
+
+        #insert operation into portfplio
+            db.execute("INSERT INTO history (username, operation, symbol, price, shares) VALUES (:username, 'SELL', :symbol, :price, :shares)",
+              username=username, symbol=look['symbol'], price=look['price'], shares=request.form.get('shares'))
+
+        #portfolio
+
+            if int(user_shares) == int(shares):
+
+
+                db.execute("DELETE FROM portfolio WHERE username = :username and symbol = :symbol",
+                            username=username, symbol=str(request.form.get("symbol")))
+
+               # If the user is just selling some of the shares, update the portfolio
+            elif int(user_shares) > int(shares):
+
+                db.execute("UPDATE portfolio SET shares = :shares WHERE username = :username and symbol = :symbol",
+                            shares=look["shares"], username=username, symbol=request.form.get("symbol"))
+
+
+        #Updating Cash in users table DB
+
+            cost=cash+full_price
+            db.execute("UPDATE users SET cash =? WHERE id = ?",cost,session['user_id'])
+            return redirect("/")
+
+    else:
+
+        # Get the symbols from portfolio for the select list
+        symbol = db.execute("SELECT symbol FROM portfolio WHERE id=?", session["user_id"])
+
+        return render_template("sell.html", symbols=symbol)
+
